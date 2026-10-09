@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<title>Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen assistant. Header with status line, scrolling transcript, composer pinned below. */
+:root {
+  --bg: #eef2f5;
+  --surface: #ffffff;
+  --line: #d6dee5;
+  --fg: #14212b;
+  --muted: #5d6f7c;
+  --accent: #0f6b88;
+  --accent-soft: #d9edf3;
+  --accent-fg: #ffffff;
+  --user-bg: #14212b;
+  --user-fg: #f2f6f8;
+  --danger: #a3361f;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d151c;
+    --surface: #15212b;
+    --line: #26353f;
+    --fg: #e6edf1;
+    --muted: #8da0ad;
+    --accent: #5fc4e3;
+    --accent-soft: #17323d;
+    --accent-fg: #07222c;
+    --user-bg: #24404f;
+    --user-fg: #eef6f9;
+    --danger: #ff9a85;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d151c;
+  --surface: #15212b;
+  --line: #26353f;
+  --fg: #e6edf1;
+  --muted: #8da0ad;
+  --accent: #5fc4e3;
+  --accent-soft: #17323d;
+  --accent-fg: #07222c;
+  --user-bg: #24404f;
+  --user-fg: #eef6f9;
+  --danger: #ff9a85;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+* { box-sizing: border-box; }
+button, textarea, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  height: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* header */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.orb {
+  width: 34px; height: 34px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--bg) 0 38%, transparent 39%),
+    conic-gradient(from 210deg, var(--accent), var(--accent-soft), var(--accent));
+  box-shadow: 0 0 0 1px var(--line);
+  flex: none;
+}
+.brand { min-width: 0; flex: 1 1 140px; }
+.brand h1 {
+  margin: 0; font-family: var(--display); font-weight: 700;
+  font-size: 1.35rem; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1.1;
+}
+.brand .sub { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+.tools { display: flex; gap: 8px; }
+.ghost {
+  background: transparent; border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 12px; font-size: 0.85rem; cursor: pointer; color: var(--fg);
+}
+.ghost:hover { border-color: var(--accent); }
+
+/* profile */
+.profile {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px; display: grid; gap: 10px;
+}
+.profile label { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: grid; gap: 4px; }
+.profile input, .profile textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; font-size: 0.95rem; text-transform: none; letter-spacing: 0;
+}
+.profile textarea { min-height: 76px; resize: vertical; }
+.profile .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.profile .hint { color: var(--muted); font-size: 0.8rem; flex: 1 1 200px; }
+.primary {
+  background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  padding: 8px 16px; font-weight: 600; cursor: pointer;
+}
+.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* transcript */
+.log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-block: 8px; }
+.hello { margin: auto 0; display: grid; gap: 14px; padding-block: 12px; }
+.hello h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(1.7rem, 6vw, 2.4rem); line-height: 1.1; text-wrap: balance; }
+.hello p { margin: 0; color: var(--muted); max-width: 46ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 14px; font-size: 0.9rem; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.msg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.msg .who { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.msg.user { align-items: flex-end; }
+.msg.user .body { background: var(--user-bg); color: var(--user-fg); border-radius: 14px 14px 4px 14px; padding: 9px 14px; max-width: 88%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.jarvis .body { max-width: 100%; overflow-wrap: anywhere; }
+.body p { margin: 0 0 0.6em; }
+.body p:last-child, .body ul:last-child, .body ol:last-child { margin-bottom: 0; }
+.body ul, .body ol { margin: 0 0 0.6em; padding-left: 1.3em; }
+.body li { margin-bottom: 0.2em; }
+.body code { font-family: var(--mono); font-size: 0.88em; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+.note { font-size: 0.82rem; color: var(--muted); }
+.err { font-size: 0.88rem; color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 8px 12px; }
+
+.dots { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: 0.9rem; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
+.dots i:nth-child(2) { animation-delay: 0.15s; }
+.dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: 0.7; } }
+
+/* file cards */
+.file {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px; max-width: 420px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+.ficon {
+  flex: none; width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-family: var(--mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em;
+}
+.fmeta { flex: 1; min-width: 0; }
+.fname { font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
+.fsub { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.dots span.lbl { margin-left: 6px; }
+.file.hand { flex-wrap: wrap; max-width: 460px; }
+.handta {
+  flex: 1 1 100%; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px; font-family: var(--mono); font-size: 0.78rem;
+}
+.fsub { overflow-wrap: anywhere; }
+
+/* voice */
+.tools { flex-wrap: wrap; }
+.ghost.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.mic {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); border-radius: 10px; color: var(--fg);
+}
+.mic svg { width: 20px; height: 20px; }
+.mic.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.mic.speaking { border-color: var(--accent); color: var(--accent); }
+.profile label.chk {
+  display: flex; flex-direction: row; align-items: center; gap: 8px;
+  text-transform: none; letter-spacing: 0; font-family: var(--body); font-size: 0.9rem; color: var(--fg);
+}
+.profile .chk input { width: auto; }
+
+/* composer */
+.composer {
+  display: flex; gap: 8px; align-items: flex-end;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px;
+}
+.composer:focus-within { border-color: var(--accent); }
+.composer textarea {
+  flex: 1; min-width: 0; border: 0; background: transparent; resize: none;
+  max-height: 140px; padding: 6px 8px; outline: none; line-height: 1.45;
+}
+.composer .primary { padding: 9px 16px; }
+.stop { background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+.foot { font-family: var(--mono); font-size: 0.66rem; color: var(--muted); text-align: center; }
+</style>
+
+<main class="app">
+  <header class="top">
+    <div class="orb" aria-hidden="true"></div>
+    <div class="brand">
+      <h1>Jarvis</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="tools">
+      <button class="ghost" id="profileBtn" type="button" aria-expanded="false" aria-controls="profile">About you</button>
+      <button class="ghost" id="hfBtn" type="button">Hey Jarvis: off</button>
+      <button class="ghost" id="keyBtn" type="button">Settings</button>
+      <button class="ghost" id="newBtn" type="button">New chat</button>
+    </div>
+  </header>
+
+  <section class="profile" id="profile" hidden>
+    <label for="pName">What should Jarvis call you?
+      <input id="pName" type="text" maxlength="60" autocomplete="off" placeholder="Your name">
+    </label>
+    <label for="pNotes">Things Jarvis should always know
+      <textarea id="pNotes" maxlength="1500" placeholder="Work hours, time zone, people you often mention, how you like answers written"></textarea>
+    </label>
+    <div class="row">
+      <button class="primary" id="pSave" type="button">Save</button>
+      <span class="hint">Stored in this browser only. Jarvis reads it at the start of every reply.</span>
+    </div>
+  </section>
+
+  <section class="profile" id="settings" hidden>
+    <label for="sKey">Gemini API key
+      <input id="sKey" type="password" autocomplete="off" placeholder="Paste your key">
+    </label>
+    <label for="sModel">Model
+      <input id="sModel" type="text" autocomplete="off" placeholder="gemini-3.5-flash">
+    </label>
+    <label for="sLang">Voice language
+      <input id="sLang" type="text" autocomplete="off" placeholder="en-US (Filipino: fil-PH)">
+    </label>
+    <label class="chk" for="sRead"><input id="sRead" type="checkbox"> Read every reply aloud</label>
+    <div class="row">
+      <button class="primary" id="sSave" type="button">Save</button>
+      <span class="hint">Get a free key at aistudio.google.com/apikey. It stays on this phone. On the free tier, Google may use your chats to improve its products.</span>
+    </div>
+  </section>
+
+  <section class="log" id="log" aria-live="polite"></section>
+
+  <form class="composer" id="form">
+    <textarea id="input" rows="1" placeholder="Ask Jarvis anything" aria-label="Message Jarvis"></textarea>
+    <button class="mic" id="mic" type="button" aria-label="Speak to Jarvis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <button class="primary" id="send" type="submit">Send</button>
+    <button class="stop" id="stop" type="button" hidden>Stop</button>
+  </form>
+  <div class="foot" id="foot">Jarvis answers from this conversation only. It cannot see your calendar, email or files.</div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  var turns = store.get('jarvis.turns', []);
+  var profile = store.get('jarvis.profile', { name: '', notes: '' });
+  var sample = null;
+  var busy = false;
+  var ctl = null;
+
+  var log = $('log'), input = $('input'), sendBtn = $('send'), stopBtn = $('stop');
+
+  /* ---------- file making: PDF and PPTX are built here in the page ---------- */
+  var downloads = null, canFiles = false, made = [], liveBody = null;
+
+  function dotsHtml(label) {
+    return '<span class="dots" aria-label="' + esc(label) + '"><i></i><i></i><i></i><span class="lbl">' + esc(label) + '</span></span>';
+  }
+  function ascii(s) {
+    return String(s == null ? '' : s)
+      .replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"')
+      .replace(/[–—]/g, '-').replace(/…/g, '...').replace(/•/g, '-')
+      .replace(/₱/g, 'PHP ').replace(/€/g, 'EUR ')
+      .replace(/[   ]/g, ' ')
+      .replace(/[^\x09\x0A\x20-\x7E¡-ÿ]/g, '?');
+  }
+  function safeName(name, ext) {
+    var base = String(name || 'document').replace(/\.[a-z0-9]+$/i, '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'document';
+    return base + '.' + ext;
+  }
+  function kb(n) { return n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+
+  function buildPdf(a) {
+    if (!window.jspdf) throw new Error('The PDF library did not load.');
+    var sections = Array.isArray(a.sections) ? a.sections : [];
+    if (!sections.length) throw new Error('sections is required and must be a non-empty list.');
+    var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    var W = 210, H = 297, M = 20, maxW = W - 2 * M, y = M;
+    function room(h) { if (y + h > H - M) { doc.addPage(); y = M; } }
+    function para(text, size, style, gap, indent, mark) {
+      doc.setFont('helvetica', style); doc.setFontSize(size);
+      var lh = size * 0.45;
+      var lines = doc.splitTextToSize(ascii(text), maxW - indent);
+      for (var i = 0; i < lines.length; i++) {
+        room(lh);
+        if (i === 0 && mark) doc.text(mark, M + 1, y + lh * 0.8);
+        doc.text(lines[i], M + indent, y + lh * 0.8);
+        y += lh;
+      }
+      y += gap;
+    }
+    para(a.title || 'Document', 22, 'bold', 2, 0);
+    doc.setDrawColor(15, 107, 136); doc.setLineWidth(0.6); doc.line(M, y, W - M, y); y += 7;
+    sections.forEach(function (sec) {
+      if (sec.heading) { room(16); y += 2; para(sec.heading, 14, 'bold', 1.5, 0); }
+      String(sec.body || '').split('\n').forEach(function (ln) {
+        if (!ln.trim()) { y += 2; return; }
+        var m = ln.match(/^\s*[-*]\s+(.*)/);
+        if (m) para(m[1], 11, 'normal', 1, 6, '-'); else para(ln, 11, 'normal', 1.5, 0);
+      });
+    });
+    var n = doc.getNumberOfPages();
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120);
+    for (var p = 1; p <= n; p++) { doc.setPage(p); doc.text(p + ' / ' + n, W - M, H - 10, { align: 'right' }); }
+    return { blob: doc.output('blob'), pages: n };
+  }
+
+  async function buildPptx(a) {
+    if (!window.PptxGenJS) throw new Error('The slides library did not load.');
+    var slides = Array.isArray(a.slides) ? a.slides : [];
+    if (!slides.length) throw new Error('slides is required and must be a non-empty list.');
+    var p = new window.PptxGenJS();
+    p.layout = 'LAYOUT_16x9';
+    p.title = String(a.title || 'Presentation');
+    var ACC = '0F6B88', INK = '14212B';
+    var cover = p.addSlide();
+    cover.background = { color: INK };
+    cover.addShape(p.ShapeType.rect, { x: 0.7, y: 1.75, w: 1.2, h: 0.06, fill: { color: '5FC4E3' }, line: { color: '5FC4E3' } });
+    cover.addText(String(a.title || 'Presentation'), { x: 0.7, y: 1.95, w: 8.6, h: 1.3, fontFace: 'Arial', fontSize: 34, bold: true, color: 'FFFFFF', valign: 'top' });
+    if (a.subtitle) cover.addText(String(a.subtitle), { x: 0.7, y: 3.4, w: 8.6, h: 0.7, fontFace: 'Arial', fontSize: 18, color: '9FD3E4', valign: 'top' });
+    slides.forEach(function (sl) {
+      var s = p.addSlide();
+      s.background = { color: 'FFFFFF' };
+      s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 0.18, h: 5.625, fill: { color: ACC }, line: { color: ACC } });
+      s.addText(String(sl.title || ''), { x: 0.7, y: 0.35, w: 8.6, h: 0.95, fontFace: 'Arial', fontSize: 28, bold: true, color: INK, valign: 'middle' });
+      var bl = (Array.isArray(sl.bullets) ? sl.bullets : []).map(String).filter(Boolean);
+      if (bl.length) {
+        s.addText(bl.map(function (b) { return { text: b, options: { bullet: true, breakLine: true } }; }), {
+          x: 0.7, y: 1.5, w: 8.6, h: 3.7, fontFace: 'Arial', fontSize: bl.length > 6 ? 16 : 20, color: '33414D', valign: 'top', paraSpaceAfter: 10
+        });
+      }
+      if (sl.notes) s.addNotes(String(sl.notes));
+    });
+    var out = await p.write({ outputType: 'blob' });
+    var blob = out instanceof Blob ? out : new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+    return { blob: blob, count: slides.length + 1 };
+  }
+
+  function register(name, blob, label) {
+    made = made.filter(function (f) { return f.name !== name; });
+    made.push({ name: name, blob: blob, label: label });
+    return 'Created ' + name + ' (' + label + '). A Download button now appears under your reply. Do not repeat the contents.';
+  }
+
+  function fileCard(f) {
+    var c = document.createElement('div'); c.className = 'file';
+    var ic = document.createElement('div'); ic.className = 'ficon'; ic.textContent = f.name.split('.').pop().toUpperCase();
+    var meta = document.createElement('div'); meta.className = 'fmeta';
+    var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = f.name;
+    var sb = document.createElement('div'); sb.className = 'fsub';
+    var info = f.label + ' · ' + kb(f.blob.size);
+    sb.textContent = info;
+    meta.appendChild(nm); meta.appendChild(sb);
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'primary'; btn.textContent = 'Download';
+    btn.onclick = function () {
+      btn.disabled = true;
+      downloads.save({ filename: f.name, data: f.blob }).then(function () {
+        btn.disabled = false; btn.textContent = 'Saved'; sb.textContent = info;
+      }, function (e) {
+        btn.disabled = false;
+        var code = e && e.code;
+        if (code === 'declined') return;
+        sb.textContent = code === 'rate_limited' ? 'Another save prompt is open. Try again in a moment.' : 'Saving is not available in this view.';
+      });
+    };
+    c.appendChild(ic); c.appendChild(meta); c.appendChild(btn);
+    return c;
+  }
+
+  function attachFiles(body) {
+    var names = made.map(function (f) { return f.name; });
+    made.forEach(function (f) { body.parentNode.appendChild(fileCard(f)); });
+    return names;
+  }
+
+  /* File blocks written by Jarvis in his reply become real files here. */
+  function splitFiles(t) {
+    var files = [], handoffs = [];
+    var re = /<<<FILE[ \t]+(pdf|pptx)[ \t]*:?[ \t]*([^\n]*)\n([\s\S]*?)\n?>>>/gi;
+    var text = t.replace(re, function (_, k, n, raw) { files.push({ kind: k.toLowerCase(), name: n.trim(), raw: raw }); return ''; });
+    text = text.replace(/<<<HANDOFF[ \t]*\n([\s\S]*?)\n?>>>/gi, function (_, raw) { if (raw.trim()) handoffs.push(raw.trim()); return ''; });
+    var cut = false, i = text.search(/<<<(FILE|HANDOFF)/);
+    if (i >= 0) { text = text.slice(0, i); cut = true; }
+    text = text.replace(/```[a-z]*\s*```/g, '').replace(/```[a-z]*\s*$/, '').trim();
+    return { text: text, files: files, handoffs: handoffs, cut: cut };
+  }
+  function visibleWhileStreaming(t) {
+    var i = t.search(/<<<(FILE|HANDOFF)/);
+    if (i < 0) return { text: t, building: false };
+    return { text: t.slice(0, i).replace(/```[a-z]*\s*$/, '').trim(), building: true };
+  }
+
+  /* A request Jarvis prepares for Claude, to be pasted into the person's main chat. */
+  function handoffCard(text) {
+    var c = document.createElement('div'); c.className = 'file hand';
+    var ic = document.createElement('div'); ic.className = 'ficon'; ic.textContent = 'ASK';
+    var meta = document.createElement('div'); meta.className = 'fmeta';
+    var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = 'Request for Claude';
+    var sb = document.createElement('div'); sb.className = 'fsub';
+    var preview = text.replace(/\s+/g, ' ').slice(0, 90) + (text.length > 90 ? '...' : '');
+    sb.textContent = preview;
+    meta.appendChild(nm); meta.appendChild(sb);
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'primary'; btn.textContent = 'Copy request';
+    function fallback() {
+      if (c.querySelector('.handta')) return;
+      var ta = document.createElement('textarea'); ta.className = 'handta'; ta.readOnly = true; ta.value = text; ta.rows = 6;
+      c.appendChild(ta); ta.focus(); ta.select();
+      sb.textContent = 'Copy was blocked. Select the text below, copy it, then paste it into your chat with Claude.';
+    }
+    btn.onclick = function () {
+      var p;
+      try { p = navigator.clipboard.writeText(text); } catch (e) { p = Promise.reject(e); }
+      p.then(function () { btn.textContent = 'Copied'; sb.textContent = 'Paste it into your chat with Claude.'; }, fallback);
+    };
+    c.appendChild(ic); c.appendChild(meta); c.appendChild(btn);
+    return c;
+  }
+  function parsePdfSpec(name, raw) {
+    var title = '', sections = [], cur = null;
+    raw.split('\n').forEach(function (ln) {
+      var m;
+      if ((m = ln.match(/^#\s+(.*)/)) && !title) { title = m[1].trim(); return; }
+      if ((m = ln.match(/^##\s+(.*)/))) { cur = { heading: m[1].trim(), body: '' }; sections.push(cur); return; }
+      if (!cur) { cur = { heading: '', body: '' }; sections.push(cur); }
+      cur.body += ln + '\n';
+    });
+    return { title: title || name || 'Document', sections: sections };
+  }
+  function parsePptxSpec(name, raw) {
+    var title = '', subtitle = '', slides = [], cur = null;
+    raw.split('\n').forEach(function (ln) {
+      var m;
+      if ((m = ln.match(/^#\s+(.*)/)) && !title) { title = m[1].trim(); return; }
+      if (!cur && (m = ln.match(/^subtitle:\s*(.*)/i))) { subtitle = m[1].trim(); return; }
+      if ((m = ln.match(/^##\s+(.*)/))) { cur = { title: m[1].trim(), bullets: [], notes: '' }; slides.push(cur); return; }
+      if (!cur) return;
+      if ((m = ln.match(/^notes:\s*(.*)/i))) { cur.notes += (cur.notes ? ' ' : '') + m[1].trim(); return; }
+      if ((m = ln.match(/^\s*[-*]\s+(.*)/))) { cur.bullets.push(m[1].trim()); return; }
+      if (ln.trim()) cur.bullets.push(ln.trim());
+    });
+    return { title: title || name || 'Presentation', subtitle: subtitle, slides: slides };
+  }
+  async function buildFiles(files) {
+    var failed = [];
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      try {
+        if (f.kind === 'pdf') {
+          var ps = parsePdfSpec(f.name, f.raw);
+          var r = buildPdf(ps);
+          register(safeName(f.name || ps.title, 'pdf'), r.blob, 'PDF, ' + r.pages + (r.pages > 1 ? ' pages' : ' page'));
+        } else {
+          var ss = parsePptxSpec(f.name, f.raw);
+          var r2 = await buildPptx(ss);
+          register(safeName(f.name || ss.title, 'pptx'), r2.blob, 'PPTX, ' + r2.count + ' slides');
+        }
+      } catch (err) { failed.push(f.name || f.kind); }
+    }
+    return failed;
+  }
+
+  /* ---------- text formatting (escape first, then light markdown) ---------- */
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function inline(s) {
+    return esc(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  }
+  function fmt(t) {
+    var lines = t.split('\n'), html = '', list = null, m;
+    function close() { if (list) { html += '</' + list + '>'; list = null; } }
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      if ((m = ln.match(/^\s*[-*]\s+(.*)/))) {
+        if (list !== 'ul') { close(); html += '<ul>'; list = 'ul'; }
+        html += '<li>' + inline(m[1]) + '</li>';
+      } else if ((m = ln.match(/^\s*\d+[.)]\s+(.*)/))) {
+        if (list !== 'ol') { close(); html += '<ol>'; list = 'ol'; }
+        html += '<li>' + inline(m[1]) + '</li>';
+      } else if (!ln.trim()) {
+        close();
+      } else if ((m = ln.match(/^#{1,3}\s+(.*)/))) {
+        close(); html += '<p><strong>' + inline(m[1]) + '</strong></p>';
+      } else {
+        close(); html += '<p>' + inline(ln) + '</p>';
+      }
+    }
+    close();
+    return html;
+  }
+
+  /* ---------- header + greeting ---------- */
+  function today() {
+    return new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function greeting() {
+    var h = new Date().getHours();
+    var part = h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    return profile.name ? part + ', ' + profile.name + '.' : part + '.';
+  }
+  function renderSub() { $('sub').textContent = getModel() + ' · ' + today(); }
+
+  var STARTERS = [
+    ['Plan my day', 'Help me plan my day. Here is what I have on and what I need to get done: '],
+    ['Draft a message', 'Draft a message for me. Who it is to and what I need to say: '],
+    ['Help me decide', 'Help me decide between a few options. The decision and the options: '],
+    ['Prep for a meeting', 'Help me prepare for a meeting. The topic, the people and what I want out of it: '],
+    ['Make a PDF', 'Make me a PDF about: '],
+    ['Make slides', 'Make me a slide deck about: ']
+  ];
+
+  function renderHello() {
+    var wrap = document.createElement('div');
+    wrap.className = 'hello';
+    wrap.innerHTML = '<h2>' + esc(greeting()) + '</h2><p>I can plan, draft, summarise, think things through and keep track of what you tell me in this chat. What do you need?</p>';
+    var chips = document.createElement('div');
+    chips.className = 'chips';
+    STARTERS.forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = s[0];
+      b.onclick = function () { input.value = s[1]; grow(); input.focus(); };
+      chips.appendChild(b);
+    });
+    wrap.appendChild(chips);
+    log.appendChild(wrap);
+  }
+
+  function addMsg(role, content, html) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + (role === 'user' ? 'user' : 'jarvis');
+    var who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = role === 'user' ? (profile.name || 'You') : 'Jarvis';
+    var body = document.createElement('div');
+    body.className = 'body';
+    if (role === 'user') body.textContent = content; else body.innerHTML = html != null ? html : fmt(content);
+    d.appendChild(who); d.appendChild(body);
+    log.appendChild(d);
+    return body;
+  }
+
+  function renderAll() {
+    log.innerHTML = '';
+    if (!turns.length) renderHello();
+    turns.forEach(function (t) {
+      var b = addMsg(t.role, t.content);
+      if (t.files && t.files.length) {
+        var n = document.createElement('div'); n.className = 'note';
+        n.textContent = 'Created: ' + t.files.join(', ') + '. Ask Jarvis to make it again for a fresh download.';
+        b.parentNode.appendChild(n);
+      }
+    });
+    scroll();
+  }
+  function scroll() { log.scrollTop = log.scrollHeight; }
+
+  /* ---------- Jarvis's standing instructions ---------- */
+  function rules() {
+    var now = new Date().toLocaleString([], { dateStyle: 'full', timeStyle: 'short' });
+    var s = 'You are Jarvis, a personal assistant. Be calm, quick and quietly capable, with a dry wit that never gets in the way. ' +
+      'Lead with the answer or the next step. Keep replies short unless the person asks for depth. Use plain text, short lists when they help, no headings unless the reply is long. ' +
+      'Ask one clarifying question only when you cannot proceed without it. When you plan something, give times or concrete steps. ' +
+      'You work only inside this chat: you cannot see their calendar, email, files or the web, cannot send messages and cannot set reminders. ' +
+      'If asked to do any of that, say so in one line and offer the closest useful thing, such as a draft they can send or a schedule they can copy. Never pretend an action happened. ' +
+      'Treat what the person tells you in this conversation as what you know about them; do not invent facts about their life.\n' +
+      'Current local date and time for the person: ' + now + '.' +
+      '\nYour replies are often spoken aloud, so write the way you would speak: short sentences, no tables, no emoji, and no markup symbols outside file blocks.';
+    if (canFiles) {
+      s += '\nYou CAN create PDF documents and PowerPoint slide decks. This is a real ability of this app: you write a file block and the app turns it into a file the person can save. ' +
+        'Do this whenever the person asks for a file, PDF, deck, slides or presentation, or when a document clearly beats a chat reply. ' +
+        'Reply with one short sentence, then the block, with nothing after it. Do not put the block in a code fence. Use exactly this format.\n' +
+        'For a PDF:\n<<<FILE pdf: short-file-name\n# Document title\n## Section heading\nParagraph text. A line starting with "- " is a bullet.\n>>>\n' +
+        'For slides:\n<<<FILE pptx: short-file-name\n# Deck title\nsubtitle: one line\n## Slide title\n- short bullet\n- short bullet\nnotes: optional speaker notes\n>>>\n' +
+        'Inside a block use plain text only, with no bold or other markdown. Write the full real content yourself instead of asking more questions than you need. ' +
+        'Unless told otherwise, make decks 6 to 10 slides with 3 to 5 short bullets each. The app shows the Save button by itself, so never explain the block format and never paste the file contents into the reply. ' +
+        'You cannot make Word or Excel files; offer a PDF or deck instead.';
+    } else {
+      s += '\nYou cannot make files right now. If the person wants a document, write its content in the chat instead.';
+    }
+    if (profile.name) s += '\nThe person goes by: ' + profile.name + '.';
+    if (profile.notes) s += '\nStanding notes the person wants you to keep in mind:\n' + profile.notes;
+    return s;
+  }
+
+  function errorCopy(code) {
+    switch (code) {
+      case 'no_key': return 'Add your Gemini API key in Settings first.';
+      case 'bad_key': return 'Google did not accept the API key. Open Settings and paste it again.';
+      case 'bad_model': return 'That model name was not found. Open Settings and use a model such as gemini-3.5-flash.';
+      case 'rate_limited': return 'You reached the free usage limit for now. Wait a minute, or try again later.';
+      case 'network': return 'Cannot reach Google. Check your internet connection and try again.';
+      case 'refused': return 'Gemini declined that request. Try rewording it.';
+      case 'empty_completion': return 'No answer came back. Try rephrasing.';
+      case 'bad_request': return 'Google rejected the request. Start a new chat and try again.';
+      default: return 'The connection dropped before Jarvis finished. Send your message again.';
+    }
+  }
+
+  /* ---------- sending ---------- */
+  function setBusy(b) {
+    busy = b;
+    sendBtn.hidden = b;
+    stopBtn.hidden = !b;
+    input.disabled = false;
+  }
+
+  async function send(text) {
+    text = (text || '').trim();
+    if (busy || !text || !sample) return;
+    if (!turns.length) log.innerHTML = '';
+    turns.push({ role: 'user', content: text });
+    store.set('jarvis.turns', turns);
+    addMsg('user', text);
+    input.value = ''; grow();
+
+    var body = addMsg('jarvis', '', dotsHtml('Thinking'));
+    scroll();
+    setBusy(true);
+    ctl = new AbortController();
+    liveBody = body;
+    made = [];
+    var replyText = '';
+
+    var convo = [{ role: 'user', content: rules() }].concat(turns.slice(-30).map(function (t) {
+      return { role: t.role, content: t.content + (t.files && t.files.length ? '\n\n[Files created and offered for download: ' + t.files.join(', ') + ']' : '') };
+    }));
+    var opts = {
+      model: 'claude-sonnet-5-5',
+      modelTier: 'default',
+      cache: false,
+      signal: ctl.signal,
+      onText: function (u) {
+        var v = visibleWhileStreaming(u.text);
+        body.innerHTML = (v.text ? fmt(v.text) : '') + (v.building ? dotsHtml('Building your file') : '');
+        scroll();
+      }
+    };
+    try {
+      var res = await sample(convo, opts);
+      var sp = splitFiles(res.text);
+      var failed = canFiles ? await buildFiles(sp.files) : sp.files.map(function (f) { return f.name || f.kind; });
+      var shownText = sp.text || (made.length ? 'Here you go.' : sp.handoffs.length ? 'The request is ready to send to Claude.' : '');
+      sp.handoffs.forEach(function (h) { body.parentNode.appendChild(handoffCard(h)); });
+      body.innerHTML = fmt(shownText);
+      if (res.truncated || sp.cut) {
+        var n = document.createElement('div'); n.className = 'note';
+        n.textContent = sp.cut ? 'The file was cut off before it finished. Ask Jarvis to make it again.' : 'Cut short. Ask Jarvis to continue.'; body.appendChild(n);
+      }
+      if (failed.length) {
+        var fe = document.createElement('div'); fe.className = 'err';
+        fe.textContent = 'Could not build ' + failed.join(', ') + '. Ask Jarvis to try again.';
+        body.parentNode.appendChild(fe);
+      }
+      turns.push({ role: 'assistant', content: shownText || res.text, files: attachFiles(body) });
+      replyText = shownText;
+    } catch (e) {
+      var partial = e && e.text && splitFiles(e.text).text;
+      if (partial) {
+        body.innerHTML = fmt(partial);
+        turns.push({ role: 'assistant', content: partial });
+        if (e.code !== 'cancelled') {
+          var n2 = document.createElement('div'); n2.className = 'note';
+          n2.textContent = 'Interrupted.'; body.appendChild(n2);
+        }
+      } else {
+        body.parentNode.remove();
+      }
+      if (!e || e.code !== 'cancelled') {
+        var er = document.createElement('div'); er.className = 'err';
+        er.textContent = errorCopy(e && e.code);
+        log.appendChild(er);
+      }
+    } finally {
+      store.set('jarvis.turns', turns);
+      setBusy(false);
+      ctl = null;
+      scroll();
+      if (!handsFree) input.focus();
+    }
+    return replyText;
+  }
+
+  /* ---------- wiring ---------- */
+  function grow() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  }
+  input.addEventListener('input', grow);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submitText(input.value); }
+  });
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); submitText(input.value); });
+  stopBtn.addEventListener('click', function () { if (ctl) ctl.abort(); });
+
+  $('newBtn').addEventListener('click', function () {
+    if (ctl) ctl.abort();
+    turns = []; store.set('jarvis.turns', turns); renderAll();
+  });
+
+  var panel = $('profile'), pBtn = $('profileBtn');
+  pBtn.addEventListener('click', function () {
+    panel.hidden = !panel.hidden;
+    pBtn.setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) { $('pName').value = profile.name; $('pNotes').value = profile.notes; $('pName').focus(); }
+  });
+  $('pSave').addEventListener('click', function () {
+    profile = { name: $('pName').value.trim(), notes: $('pNotes').value.trim() };
+    store.set('jarvis.profile', profile);
+    panel.hidden = true; pBtn.setAttribute('aria-expanded', 'false');
+    if (!turns.length) renderAll();
+  });
+
+  renderSub();
+  renderAll();
+
+  /* ---------- Gemini ---------- */
+  function getKey() { return store.get('jarvis.key', ''); }
+  function getModel() { return store.get('jarvis.model', '') || 'gemini-3.5-flash'; }
+
+  async function geminiCall(convo, opts) {
+    var key = getKey();
+    if (!key) throw { code: 'no_key', message: 'No API key' };
+    var contents = [];
+    convo.slice(1).forEach(function (m) {
+      var role = m.role === 'assistant' ? 'model' : 'user';
+      var last = contents[contents.length - 1];
+      if (last && last.role === role) last.parts[0].text += '\n\n' + m.content;
+      else contents.push({ role: role, parts: [{ text: m.content }] });
+    });
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(getModel()) + ':streamGenerateContent?alt=sse';
+    var resp;
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        signal: opts && opts.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: convo[0].content }] }, contents: contents })
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw { code: 'cancelled', text: '' };
+      throw { code: 'network', message: String(e) };
+    }
+    if (!resp.ok) {
+      var msg = '';
+      try { var j = await resp.json(); msg = (j.error && j.error.message) || ''; } catch (e) {}
+      var code = resp.status === 429 ? 'rate_limited' : resp.status === 404 ? 'bad_model'
+        : (resp.status === 401 || resp.status === 403 || (resp.status === 400 && /api key/i.test(msg))) ? 'bad_key'
+        : resp.status === 400 ? 'bad_request' : 'upstream_error';
+      throw { code: code, message: msg };
+    }
+    var text = '', truncated = false, blocked = false, changed = false, buf = '';
+    function eat(line) {
+      line = line.trim();
+      if (line.indexOf('data:') !== 0) return;
+      var d = line.slice(5).trim();
+      if (!d) return;
+      var j; try { j = JSON.parse(d); } catch (e) { return; }
+      var c = j.candidates && j.candidates[0];
+      if (c && c.content && c.content.parts) c.content.parts.forEach(function (p) { if (p.text && !p.thought) { text += p.text; changed = true; } });
+      if (c && c.finishReason === 'MAX_TOKENS') truncated = true;
+      if (j.promptFeedback && j.promptFeedback.blockReason) blocked = true;
+    }
+    function feed(chunk) {
+      buf += chunk;
+      var lines = buf.split('\n');
+      buf = lines.pop();
+      lines.forEach(eat);
+      if (changed && opts && opts.onText) { changed = false; opts.onText({ text: text }); }
+    }
+    try {
+      if (resp.body && resp.body.getReader) {
+        var reader = resp.body.getReader(), dec = new TextDecoder();
+        for (;;) {
+          var r = await reader.read();
+          if (r.done) break;
+          feed(dec.decode(r.value, { stream: true }));
+        }
+        feed('\n');
+      } else {
+        feed((await resp.text()) + '\n');
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw { code: 'cancelled', text: text };
+      throw { code: 'upstream_error', text: text };
+    }
+    if (!text) throw { code: blocked ? 'refused' : 'empty_completion' };
+    return { text: text, truncated: truncated };
+  }
+
+  /* ---------- saving files: share sheet in the app, normal download in a browser ---------- */
+  function blobToBase64(blob) {
+    return new Promise(function (res, rej) {
+      var r = new FileReader();
+      r.onload = function () { res(String(r.result).split(',')[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+  function saveFile(req) {
+    var cap = window.Capacitor, P = cap && cap.Plugins;
+    var native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+    if (native && P && P.Filesystem && P.Share) {
+      return blobToBase64(req.data).then(function (b64) {
+        return P.Filesystem.writeFile({ path: req.filename, data: b64, directory: 'CACHE' });
+      }).then(function (r) {
+        return P.Share.share({ title: req.filename, files: [r.uri], dialogTitle: 'Save or open ' + req.filename });
+      }).then(function () { return { status: 'saved' }; }, function (e) {
+        if (/cancel/i.test(String((e && e.message) || e))) throw { code: 'declined' };
+        throw { code: 'unavailable', message: String((e && e.message) || e) };
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(req.data); a.download = req.filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        resolve({ status: 'saved' });
+      } catch (e) { reject({ code: 'unavailable' }); }
+    });
+  }
+
+  /* ---------- voice: talk to Jarvis, hear him answer, optional "Hey Jarvis" ---------- */
+  var micBtn = $('mic'), hfBtn = $('hfBtn');
+  var handsFree = false, listening = false, speaking = false, loopToken = 0, stopCurrent = null, baseFoot = '', wake = null;
+
+  function setStatus(t) { $('foot').textContent = t || baseFoot; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function isNative() { var c = window.Capacitor; return !!(c && c.isNativePlatform && c.isNativePlatform()); }
+  function plugin(n) { return isNative() && window.Capacitor.Plugins ? window.Capacitor.Plugins[n] : null; }
+  function vLang() { return store.get('jarvis.lang', '') || 'en-US'; }
+  function readAloud() { return !!store.get('jarvis.read', false); }
+  function voiceSupported() { return !!(plugin('SpeechRecognition') || window.SpeechRecognition || window.webkitSpeechRecognition); }
+
+  async function ensureMic() {
+    var SR = plugin('SpeechRecognition');
+    if (!SR) return;
+    var av = await SR.available();
+    if (!av || !av.available) throw { code: 'unsupported' };
+    var p = await SR.checkPermissions();
+    if (p.speechRecognition !== 'granted') {
+      p = await SR.requestPermissions();
+      if (p.speechRecognition !== 'granted') throw { code: 'denied' };
+    }
+  }
+
+  async function nativeListen(SR, onPartial) {
+    await ensureMic();
+    var last = '', handles = [];
+    var finished = new Promise(function (res) {
+      SR.addListener('listeningState', function (d) { if (d && d.status === 'stopped') res(); }).then(function (h) { handles.push(h); });
+    });
+    handles.push(await SR.addListener('partialResults', function (d) {
+      var m = d && d.matches && d.matches[0];
+      if (m) { last = m; if (onPartial) onPartial(m); }
+    }));
+    stopCurrent = function () { try { SR.stop(); } catch (e) {} };
+    try {
+      await SR.start({ language: vLang(), maxResults: 1, partialResults: true, popup: false });
+      await Promise.race([finished, sleep(15000)]);
+    } finally {
+      stopCurrent = null;
+      try { await SR.stop(); } catch (e) {}
+      handles.forEach(function (h) { try { h.remove(); } catch (e) {} });
+    }
+    return last;
+  }
+
+  function listenOnce(onPartial) {
+    var SR = plugin('SpeechRecognition');
+    if (SR) return nativeListen(SR, onPartial);
+    var W = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!W) return Promise.reject({ code: 'unsupported' });
+    return new Promise(function (resolve, reject) {
+      var r = new W(), last = '';
+      r.lang = vLang(); r.interimResults = true; r.maxAlternatives = 1;
+      r.onresult = function (e) {
+        last = '';
+        for (var i = 0; i < e.results.length; i++) last += e.results[i][0].transcript;
+        if (onPartial) onPartial(last);
+      };
+      r.onerror = function (e) {
+        stopCurrent = null;
+        reject({ code: (e.error === 'not-allowed' || e.error === 'service-not-allowed') ? 'denied' : 'nospeech' });
+      };
+      r.onend = function () { stopCurrent = null; resolve(last); };
+      stopCurrent = function () { try { r.stop(); } catch (e) {} };
+      try { r.start(); } catch (e) { stopCurrent = null; reject({ code: 'unsupported' }); }
+    });
+  }
+
+  function micError(e) {
+    var c = e && e.code;
+    if (c === 'denied') return 'The microphone is off for Jarvis. Allow it in your phone settings.';
+    if (c === 'unsupported') return 'Voice input is not available on this phone.';
+    return 'Could not hear you. Try again.';
+  }
+
+  function cleanForSpeech(t) {
+    return String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/[*`#_>]/g, '')
+      .replace(/^\s*[-•]\s+/gm, '').replace(/\s+/g, ' ').trim().slice(0, 1800);
+  }
+  async function speak(text) {
+    text = cleanForSpeech(text);
+    if (!text) return;
+    speaking = true; micBtn.classList.add('speaking');
+    try {
+      var T = plugin('TextToSpeech');
+      if (T) await T.speak({ text: text, lang: vLang(), rate: 1.0, pitch: 1.0, volume: 1.0, category: 'ambient' });
+      else if (window.speechSynthesis) {
+        await new Promise(function (res) {
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = vLang(); u.onend = res; u.onerror = res;
+          window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+        });
+      }
+    } catch (e) {}
+    speaking = false; micBtn.classList.remove('speaking');
+  }
+  function stopSpeaking() {
+    try {
+      var T = plugin('TextToSpeech');
+      if (T) T.stop(); else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+
+  function submitText(text) {
+    return send(text).then(function (r) { if (r && readAloud()) return speak(r); });
+  }
+
+  async function micTap() {
+    if (speaking) { stopSpeaking(); return; }
+    if (handsFree || busy) return;
+    if (listening) { if (stopCurrent) stopCurrent(); return; }
+    listening = true; micBtn.classList.add('on'); setStatus('Listening...');
+    var err = null;
+    try {
+      var heard = await listenOnce(function (t) { input.value = t; grow(); });
+      heard = (heard || '').trim();
+      if (heard) { setStatus(''); var r = await send(heard); if (r) await speak(r); }
+      else { input.value = ''; grow(); err = "Didn't catch that. Tap the mic and try again."; }
+    } catch (e) { err = micError(e); }
+    listening = false; micBtn.classList.remove('on');
+    setStatus(err || '');
+  }
+
+  function wakeCommand(heard) {
+    var i = String(heard || '').search(/\bjarvis\b/i);
+    if (i < 0) return null;
+    return heard.slice(i + 6).replace(/^[\s,.!?:;-]+/, '').trim();
+  }
+
+  async function runLoop() {
+    var token = ++loopToken;
+    while (handsFree && token === loopToken) {
+      if (busy) { await sleep(500); continue; }
+      setStatus('Listening for "Hey Jarvis"...');
+      var heard = '';
+      try { heard = await listenOnce(); }
+      catch (e) {
+        if (e && (e.code === 'denied' || e.code === 'unsupported')) { stopHandsFree(micError(e)); return; }
+        await sleep(700); continue;
+      }
+      if (!handsFree || token !== loopToken) return;
+      var cmd = wakeCommand(heard);
+      if (cmd === null) continue;
+      if (!cmd) {
+        await speak('Yes?');
+        setStatus('Listening...');
+        try { cmd = (await listenOnce()).trim(); } catch (e) { cmd = ''; }
+      }
+      if (!handsFree || token !== loopToken) return;
+      if (!cmd) continue;
+      setStatus('Thinking...');
+      var reply = await send(cmd);
+      if (reply) await speak(reply);
+    }
+  }
+
+  async function toggleHandsFree() {
+    if (handsFree) { stopHandsFree(''); return; }
+    try { await ensureMic(); } catch (e) { setStatus(micError(e)); return; }
+    try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; }
+    handsFree = true; hfBtn.classList.add('on'); hfBtn.textContent = 'Hey Jarvis: on';
+    runLoop();
+  }
+  function stopHandsFree(msg) {
+    handsFree = false; loopToken++;
+    hfBtn.classList.remove('on'); hfBtn.textContent = 'Hey Jarvis: off';
+    if (stopCurrent) stopCurrent();
+    stopSpeaking();
+    try { if (wake) wake.release(); } catch (e) {}
+    wake = null;
+    setStatus(msg || '');
+  }
+
+  micBtn.addEventListener('click', micTap);
+  hfBtn.addEventListener('click', toggleHandsFree);
+
+  /* ---------- settings ---------- */
+  var sPanel = $('settings');
+  function openSettings() { sPanel.hidden = false; $('sKey').value = getKey(); $('sModel').value = getModel(); $('sLang').value = store.get('jarvis.lang', ''); $('sRead').checked = readAloud(); }
+  $('keyBtn').addEventListener('click', function () { if (sPanel.hidden) openSettings(); else sPanel.hidden = true; });
+  $('sSave').addEventListener('click', function () {
+    store.set('jarvis.key', $('sKey').value.trim());
+    store.set('jarvis.model', $('sModel').value.trim());
+    store.set('jarvis.lang', $('sLang').value.trim());
+    store.set('jarvis.read', $('sRead').checked);
+    sPanel.hidden = true;
+    renderSub();
+  });
+
+  /* ---------- start ---------- */
+  sample = geminiCall;
+  downloads = { save: saveFile };
+  canFiles = !!(window.jspdf && window.PptxGenJS);
+  $('foot').textContent = canFiles
+    ? 'Jarvis can make PDFs and slide decks. It cannot see your calendar, email or files.'
+    : 'The file tools did not load, so Jarvis cannot make PDFs or decks right now. Check your internet connection and reopen the app.';
+  baseFoot = $('foot').textContent;
+  if (!voiceSupported()) { micBtn.hidden = true; hfBtn.hidden = true; }
+  if (!getKey()) openSettings();
+})();
+</script>
+
+</body>
+</html>
