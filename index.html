@@ -1,0 +1,897 @@
+
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<style>
+
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+body { margin: 0; }
+
+[hidden] { display: none !important; }
+
+img { max-width: 100%; }
+
+</style>
+
+</head>
+
+<body>
+
+<title>Jarvis</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+
+:root {
+
+--bg: #eef2f5;
+
+--surface: #ffffff;
+
+--line: #d6dee5;
+
+--fg: #14212b;
+
+--muted: #5d6f7c;
+
+--accent: #0f6b88;
+
+--accent-soft: #d9edf3;
+
+--accent-fg: #ffffff;
+
+--user-bg: #14212b;
+
+--user-fg: #f2f6f8;
+
+--danger: #a3361f;
+
+--display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+
+--body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+--mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+}
+
+@media (prefers-color-scheme: dark) {
+
+:root:not([data-theme="light"]) {
+
+--bg: #0d151c;
+
+--surface: #15212b;
+
+--line: #26353f;
+
+--fg: #e6edf1;
+
+--muted: #8da0ad;
+
+--accent: #5fc4e3;
+
+--accent-soft: #17323d;
+
+--accent-fg: #07222c;
+
+--user-bg: #24404f;
+
+--user-fg: #eef6f9;
+
+--danger: #ff9a85;
+
+color-scheme: dark;
+
+}
+
+}
+
+:root[data-theme="dark"] {
+
+--bg: #0d151c;
+
+--surface: #15212b;
+
+--line: #26353f;
+
+--fg: #e6edf1;
+
+--muted: #8da0ad;
+
+--accent: #5fc4e3;
+
+--accent-soft: #17323d;
+
+--accent-fg: #07222c;
+
+--user-bg: #24404f;
+
+--user-fg: #eef6f9;
+
+--danger: #ff9a85;
+
+color-scheme: dark;
+
+}
+
+html, body { height: 100%; }
+
+body {
+
+background: var(--bg);
+
+color: var(--fg);
+
+font-family: var(--body);
+
+font-size: 16px;
+
+line-height: 1.6;
+
+}
+
+{ box-sizing: border-box; }
+
+button, textarea, input { font: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+
+height: 100%;
+
+max-width: 760px;
+
+margin: 0 auto;
+
+padding-inline: 16px;
+
+padding-block: 12px;
+
+display: flex;
+
+flex-direction: column;
+
+gap: 12px;
+
+}
+
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.orb {
+
+width: 34px; height: 34px; border-radius: 50%;
+
+background:
+
+radial-gradient(circle at 50% 50%, var(--bg) 0 38%, transparent 39%),
+
+conic-gradient(from 210deg, var(--accent), var(--accent-soft), var(--accent));
+
+box-shadow: 0 0 0 1px var(--line);
+
+flex: none;
+
+}
+
+.brand { min-width: 0; flex: 1 1 140px; }
+
+.brand h1 {
+
+margin: 0; font-family: var(--display); font-weight: 700;
+
+font-size: 1.35rem; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1.1;
+
+}
+
+.brand .sub { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+
+.tools { display: flex; gap: 8px; }
+
+.ghost {
+
+background: transparent; border: 1px solid var(--line); border-radius: 8px;
+
+padding: 6px 12px; font-size: 0.85rem; cursor: pointer; color: var(--fg);
+
+}
+
+.ghost:hover { border-color: var(--accent); }
+
+.profile {
+
+background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+
+padding: 14px; display: grid; gap: 10px;
+
+}
+
+.profile label { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: grid; gap: 4px; }
+
+.profile input, .profile textarea {
+
+background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; font-size: 0.95rem; text-transform: none; letter-spacing: 0;
+
+}
+
+.profile textarea { min-height: 76px; resize: vertical; }
+
+.profile .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.profile .hint { color: var(--muted); font-size: 0.8rem; flex: 1 1 200px; }
+
+.primary {
+
+background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+
+padding: 8px 16px; font-weight: 600; cursor: pointer;
+
+}
+
+.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-block: 8px; }
+
+.hello { margin: auto 0; display: grid; gap: 14px; padding-block: 12px; }
+
+.hello h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(1.7rem, 6vw, 2.4rem); line-height: 1.1; text-wrap: balance; }
+
+.hello p { margin: 0; color: var(--muted); max-width: 46ch; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+
+background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+
+padding: 7px 14px; font-size: 0.9rem; cursor: pointer;
+
+}
+
+.chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.msg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.msg .who { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.msg.user { align-items: flex-end; }
+
+.msg.user .body { background: var(--user-bg); color: var(--user-fg); border-radius: 14px 14px 4px 14px; padding: 10px 14px; max-width: 88%; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.msg.jarvis .body { max-width: 100%; overflow-wrap: anywhere; }
+
+.body p { margin-top: 0; margin-bottom: 0.85rem; }
+
+.body p:last-child, .body ul:last-child, .body ol:last-child { margin-bottom: 0; }
+
+.body ul, .body ol { margin-top: 0; margin-bottom: 0.85rem; padding-left: 1.3em; }
+
+.body li { margin-bottom: 0.35rem; }
+
+.body code { font-family: var(--mono); font-size: 0.88em; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+
+.note { font-size: 0.82rem; color: var(--muted); }
+
+.err { font-size: 0.88rem; color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 8px 12px; }
+
+.code-block {
+
+background: var(--surface);
+
+border: 1px solid var(--line);
+
+border-radius: 8px;
+
+margin-block: 12px;
+
+overflow: hidden;
+
+}
+
+.code-header {
+
+display: flex;
+
+justify-content: space-between;
+
+align-items: center;
+
+background: var(--bg);
+
+padding: 6px 12px;
+
+border-bottom: 1px solid var(--line);
+
+font-family: var(--mono);
+
+font-size: 0.75rem;
+
+color: var(--muted);
+
+}
+
+.code-header button {
+
+background: var(--surface);
+
+border: 1px solid var(--line);
+
+border-radius: 4px;
+
+padding: 2px 8px;
+
+font-size: 0.7rem;
+
+cursor: pointer;
+
+color: var(--fg);
+
+}
+
+.code-header button:hover {
+
+border-color: var(--accent);
+
+background: var(--accent-soft);
+
+}
+
+.code-block pre {
+
+margin: 0;
+
+padding: 12px;
+
+overflow-x: auto;
+
+font-family: var(--mono);
+
+font-size: 0.85rem;
+
+line-height: 1.5;
+
+}
+
+.dots { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: 0.9rem; }
+
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
+
+.dots i:nth-child(2) { animation-delay: 0.15s; }
+
+.dots i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+.file {
+
+display: flex; align-items: center; gap: 12px; margin-top: 10px; max-width: 420px;
+
+background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+
+}
+
+.ficon {
+
+flex: none; width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center;
+
+background: var(--accent-soft); color: var(--accent); font-family: var(--mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em;
+
+}
+
+.fmeta { flex: 1; min-width: 0; }
+
+.fname { font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
+
+.fsub { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+
+.composer {
+
+display: flex; gap: 8px; align-items: flex-end;
+
+background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px;
+
+}
+
+.composer:focus-within { border-color: var(--accent); }
+
+.composer textarea {
+
+flex: 1; min-width: 0; border: 0; background: transparent; resize: none;
+
+max-height: 140px; padding: 6px 8px; outline: none; line-height: 1.45;
+
+}
+
+.composer .primary { padding: 9px 16px; }
+
+.stop { background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+
+.foot { font-family: var(--mono); font-size: 0.66rem; color: var(--muted); text-align: center; }
+
+</style>
+
+<main class="app">
+
+<header class="top">
+
+<div class="orb" aria-hidden="true"></div>
+
+<div class="brand">
+
+<h1>Jarvis</h1>
+
+<div class="sub" id="sub"></div>
+
+</div>
+
+<div class="tools">
+
+<button class="ghost" id="profileBtn" type="button" aria-expanded="false" aria-controls="profile">About you</button>
+
+<button class="ghost" id="keyBtn" type="button">Settings</button>
+
+<button class="ghost" id="newBtn" type="button">New chat</button>
+
+</div>
+
+</header>
+
+<section class="profile" id="profile" hidden>
+
+<label for="pName">What should Jarvis call you?
+
+<input id="pName" type="text" maxlength="60" autocomplete="off" placeholder="Your name">
+
+</label>
+
+<label for="pNotes">Things Jarvis should always know
+
+<textarea id="pNotes" maxlength="1500" placeholder="Work hours, time zone, people you often mention, how you like answers written"></textarea>
+
+</label>
+
+<div class="row">
+
+<button class="primary" id="pSave" type="button">Save</button>
+
+<span class="hint">Stored in this browser only. Jarvis reads it at the start of every reply.</span>
+
+</div>
+
+</section>
+
+<section class="profile" id="settings" hidden>
+
+<label for="sKey">Gemini API key
+
+<input id="sKey" type="password" autocomplete="off" placeholder="Paste your key">
+
+</label>
+
+<label for="sModel">Model
+
+<input id="sModel" type="text" autocomplete="off" placeholder="gemini-1.5-flash">
+
+</label>
+
+<div class="row">
+
+<button class="primary" id="sSave" type="button">Save</button>
+
+<span class="hint">Get a free key at aistudio.google.com/apikey. It stays on this phone.</span>
+
+</div>
+
+</section>
+
+<section class="log" id="log" aria-live="polite"></section>
+
+<form class="composer" id="form">
+
+<textarea id="input" rows="1" placeholder="Ask Jarvis anything" aria-label="Message Jarvis"></textarea>
+
+<button class="primary" id="send" type="submit">Send</button>
+
+<button class="stop" id="stop" type="button" hidden>Stop</button>
+
+</form>
+
+<div class="foot" id="foot">Jarvis answers from this conversation only. It cannot see your calendar, email or files.</div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+
+<script>
+
+(function () {
+
+var $ = function (id) { return document.getElementById(id); };
+
+var store = {
+
+get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+
+set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+};
+
+var turns = store.get('jarvis.turns', []);
+
+var profile = store.get('jarvis.profile', { name: '', notes: '' });
+
+var settings = store.get('jarvis.settings', { key: '', model: 'gemini-1.5-flash' });
+
+var busy = false;
+
+var ctl = null;
+
+var log = $('log'), input = $('input'), sendBtn = $('send'), stopBtn = $('stop');
+
+// Parse markdown-style formatting, preserving spacing and formatting correctly
+
+function parseMarkdown(txt) {
+
+if (!txt) return '';
+
+var parts = txt.split(/```/g);
+
+var html = '';
+
+for (var i = 0; i < parts.length; i++) {
+
+if (i % 2 === 1) {
+
+var lines = parts[i].split('\n');
+
+var lang = lines[0].trim() || 'code';
+
+var code = lines.slice(1).join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+html += '<div class="code-block"><div class="code-header"><span>' + lang + '</span><button type="button" onclick="copyBlock(this)">Copy</button></div><pre><code>' + code.trim() + '</code></pre></div>';
+
+} else {
+
+var blocks = parts[i].split('\n\n');
+
+blocks.forEach(function (block) {
+
+if (!block.trim()) return;
+
+var lines = block.split('\n');
+
+var isList = lines.every(function(l) { return l.trim().startsWith('- ') || l.trim().startsWith('* '); });
+
+if (isList) {
+
+html += '<ul>';
+
+lines.forEach(function(l) {
+
+html += '<li>' + parseInline(l.trim().substring(2)) + '</li>';
+
+});
+
+html += '</ul>';
+
+} else {
+
+html += '<p>' + parseInline(block) + '</p>';
+
+}
+
+});
+
+}
+
+}
+
+return html;
+
+}
+
+function parseInline(txt) {
+
+return txt
+
+.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+.replace(/(.*?)/g, '<code>$1</code>')
+
+.replace(/\n/g, '<br>');
+
+}
+
+window.copyBlock = function (btn) {
+
+var code = btn.closest('.code-block').querySelector('code').innerText;
+
+navigator.clipboard.writeText(code).then(function () {
+
+var old = btn.textContent;
+
+btn.textContent = 'Copied!';
+
+btn.style.borderColor = 'var(--accent)';
+
+setTimeout(function () { btn.textContent = old; btn.style.borderColor = ''; }, 1500);
+
+});
+
+};
+
+function renderTurns() {
+
+log.innerHTML = '';
+
+if (!turns.length) {
+
+log.innerHTML = '<div class="hello"><h2>Hello, ' + (profile.name || 'friend') + '.</h2><p>How can I assist you today? Let me know if you need to draft anything or work on ideas.</p></div>';
+
+return;
+
+}
+
+turns.forEach(function (t) {
+
+appendMsg(t.role, t.content);
+
+});
+
+log.scrollTop = log.scrollHeight;
+
+}
+
+function appendMsg(role, content) {
+
+var m = document.createElement('div');
+
+m.className = 'msg ' + (role === 'user' ? 'user' : 'jarvis');
+
+var who = document.createElement('div');
+
+who.className = 'who';
+
+who.textContent = role === 'user' ? (profile.name || 'You') : 'Jarvis';
+
+var b = document.createElement('div');
+
+b.className = 'body';
+
+b.innerHTML = parseMarkdown(content);
+
+m.appendChild(who);
+
+m.appendChild(b);
+
+log.appendChild(m);
+
+}
+
+$('profileBtn').onclick = function () {
+
+var open = !$('profile').hidden;
+
+$('profile').hidden = open;
+
+this.setAttribute('aria-expanded', !open);
+
+$('pName').value = profile.name || '';
+
+$('pNotes').value = profile.notes || '';
+
+};
+
+$('pSave').onclick = function () {
+
+profile.name = $('pName').value.trim();
+
+profile.notes = $('pNotes').value.trim();
+
+store.set('jarvis.profile', profile);
+
+$('profile').hidden = true;
+
+renderTurns();
+
+};
+
+$('keyBtn').onclick = function () {
+
+var open = !$('settings').hidden;
+
+$('settings').hidden = open;
+
+$('sKey').value = settings.key || '';
+
+$('sModel').value = settings.model || 'gemini-1.5-flash';
+
+};
+
+$('sSave').onclick = function () {
+
+settings.key = $('sKey').value.trim();
+
+settings.model = $('sModel').value.trim() || 'gemini-1.5-flash';
+
+store.set('jarvis.settings', settings);
+
+$('settings').hidden = true;
+
+};
+
+$('newBtn').onclick = function () {
+
+if (confirm('Clear this chat and start fresh?')) {
+
+turns = [];
+
+store.set('jarvis.turns', []);
+
+renderTurns();
+
+}
+
+};
+
+$('form').onsubmit = async function (e) {
+
+e.preventDefault();
+
+var val = input.value.trim();
+
+if (!val || busy) return;
+
+if (!settings.key) {
+
+alert('Please open Settings and save your Gemini API key first.');
+
+return;
+
+}
+
+input.value = '';
+
+busy = true;
+
+sendBtn.disabled = true;
+
+stopBtn.hidden = false;
+
+turns.push({ role: 'user', content: val });
+
+store.set('jarvis.turns', turns);
+
+renderTurns();
+
+var loader = document.createElement('div');
+
+loader.className = 'msg jarvis';
+
+loader.innerHTML = '<div class="who">Jarvis</div><div class="body"><span class="dots"><i></i><i></i><i></i><span>Thinking...</span></span></div>';
+
+log.appendChild(loader);
+
+log.scrollTop = log.scrollHeight;
+
+ctl = new AbortController();
+
+try {
+
+var sysPrompt = "You are Jarvis. Calm, quick, capable assistant. Keep replies short. Address the user. Context:\n";
+
+if (profile.name) sysPrompt += "User Name: " + profile.name + "\n";
+
+if (profile.notes) sysPrompt += "Preferences: " + profile.notes + "\n";
+
+var contents = [{ role: 'user', parts: [{ text: sysPrompt + "Let us start." }] }];
+
+turns.forEach(function (t) {
+
+contents.push({ role: t.role === 'user' ? 'user' : 'model', parts: [{ text: t.content }] });
+
+});
+
+var res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + settings.model + ':generateContent?key=' + settings.key, {
+
+method: 'POST',
+
+headers: { 'Content-Type': 'application/json' },
+
+body: JSON.stringify({ contents: contents }),
+
+signal: ctl.signal
+
+});
+
+var data = await res.json();
+
+loader.remove();
+
+if (data.candidates && data.candidates[0].content.parts[0].text) {
+
+var reply = data.candidates[0].content.parts[0].text;
+
+turns.push({ role: 'model', content: reply });
+
+store.set('jarvis.turns', turns);
+
+renderTurns();
+
+} else {
+
+throw new Error('Could not parse response. Please check your key or settings.');
+
+}
+
+} catch (err) {
+
+if (err.name !== 'AbortError') {
+
+loader.remove();
+
+var errDiv = document.createElement('div');
+
+errDiv.className = 'err';
+
+errDiv.textContent = 'Error: ' + err.message;
+
+log.appendChild(errDiv);
+
+}
+
+} finally {
+
+busy = false;
+
+sendBtn.disabled = false;
+
+stopBtn.hidden = true;
+
+ctl = null;
+
+}
+
+};
+
+$('stop').onclick = function () {
+
+if (ctl) ctl.abort();
+
+};
+
+input.oninput = function () {
+
+this.style.height = 'auto';
+
+this.style.height = (this.scrollHeight - 4) + 'px';
+
+};
+
+renderTurns();
+
+})();
+
+</script>
+
+</body>
+
+</html>
+
